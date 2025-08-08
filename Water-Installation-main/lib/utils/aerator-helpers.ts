@@ -1,59 +1,59 @@
 import type { AeratorData } from "@/lib/types"
 
 export const calculateAeratorSavings = (data: AeratorData[]) => {
-return data.map((item) => {
-  const currentGPM = Number.parseFloat(item["Current GPM"]) || 0
-  const newGPM = Number.parseFloat(item["New GPM"]) || 0
-  const quantity = Number.parseInt(item.Quantity) || 0
+  return data.map((item) => {
+    const currentGPM = Number.parseFloat(item["Current GPM"]) || 0
+    const newGPM = Number.parseFloat(item["New GPM"]) || 0
+    const quantity = Number.parseInt(item.Quantity) || 0
 
-  const savings = (currentGPM - newGPM) * quantity
-  return {
-    ...item,
-    "Water Savings (GPM)": savings,
-  }
-})
+    const savings = (currentGPM - newGPM) * quantity
+    return {
+      ...item,
+      "Water Savings (GPM)": savings,
+    }
+  })
 }
 
 export const summarizeAeratorSavings = (data: AeratorData[]) => {
-const totalSavings = data.reduce(
-  (sum, item) => sum + (Number.parseFloat(item["Water Savings (GPM)"] as string) || 0),
-  0,
-)
-return totalSavings
+  const totalSavings = data.reduce(
+    (sum, item) => sum + (Number.parseFloat(item["Water Savings (GPM)"] as string) || 0),
+    0,
+  )
+  return totalSavings
 }
 
 export const getAeratorSummaryTable = (data: AeratorData[]) => {
-const summary: { [key: string]: { current: number; new: number; quantity: number; savings: number } } = {}
+  const summary: { [key: string]: { current: number; new: number; quantity: number; savings: number } } = {}
 
-data.forEach((item) => {
-  const type = item["Aerator Type"]
-  const currentGPM = Number.parseFloat(item["Current GPM"]) || 0
-  const newGPM = Number.parseFloat(item["New GPM"]) || 0
-  const quantity = Number.parseInt(item.Quantity) || 0
-  const savings = (currentGPM - newGPM) * quantity
+  data.forEach((item) => {
+    const type = item["Aerator Type"]
+    const currentGPM = Number.parseFloat(item["Current GPM"]) || 0
+    const newGPM = Number.parseFloat(item["New GPM"]) || 0
+    const quantity = Number.parseInt(item.Quantity) || 0
+    const savings = (currentGPM - newGPM) * quantity
 
-  if (!summary[type]) {
-    summary[type] = { current: 0, new: 0, quantity: 0, savings: 0 }
-  }
-  summary[type].current += currentGPM * quantity
-  summary[type].new += newGPM * quantity
-  summary[type].quantity += quantity
-  summary[type].savings += savings
-})
+    if (!summary[type]) {
+      summary[type] = { current: 0, new: 0, quantity: 0, savings: 0 }
+    }
+    summary[type].current += currentGPM * quantity
+    summary[type].new += newGPM * quantity
+    summary[type].quantity += quantity
+    summary[type].savings += savings
+  })
 
-return Object.entries(summary).map(([type, values]) => ({
-  "Aerator Type": type,
-  "Total Current GPM": values.current.toFixed(2),
-  "Total New GPM": values.new.toFixed(2),
-  "Total Quantity": values.quantity,
-  "Total Water Savings (GPM)": values.savings.toFixed(2),
-}))
+  return Object.entries(summary).map(([type, values]) => ({
+    "Aerator Type": type,
+    "Total Current GPM": values.current.toFixed(2),
+    "Total New GPM": values.new.toFixed(2),
+    "Total Quantity": values.quantity,
+    "Total Water Savings (GPM)": values.savings.toFixed(2),
+  }))
 }
 
 export function formatNote(note: string): string {
-// Capitalize the first letter of the note
-if (!note) return ""
-return note.charAt(0).toUpperCase() + note.slice(1)
+  // Capitalize the first letter of the note
+  if (!note) return ""
+  return note.charAt(0).toUpperCase() + note.slice(1)
 }
 
 // Helper function to detect installation columns dynamically
@@ -106,6 +106,33 @@ const getBaseValue = (columnName: string, value: any) => {
   }
   if (columnLower.includes('toilet')) {
     return 'Replaced'
+  }
+  
+  // If we can't determine the type, use the original value
+  return value.toString()
+}
+
+export function getAeratorDescription(columnName: string, value: any): string {
+  if (!value || value === '0' || value === '') return ''
+  
+  // If the value already contains GPM or other units, use it as is
+  if (typeof value === 'string' && (value.includes('GPM') || value.includes('Touch'))) {
+    return value
+  }
+  
+  // Default values based on column type
+  const columnLower = columnName.toLowerCase()
+  if (columnLower.includes('kitchen') && columnLower.includes('aerator')) {
+    return '1.0 GPM Kitchen Aerator'
+  }
+  if (columnLower.includes('bathroom') && columnLower.includes('aerator')) {
+    return '1.0 GPM Bathroom Aerator'
+  }
+  if (columnLower.includes('shower')) {
+    return '1.75 GPM Shower Head'
+  }
+  if (columnLower.includes('toilet')) {
+    return 'Toilet Replacement'
   }
   
   // If we can't determine the type, use the original value
@@ -191,8 +218,10 @@ export const consolidateInstallationsByUnitV2 = (data: any[]) => {
         const baseValue = getBaseValue(col, originalItem?.[col])
         formattedUnit[col] = baseValue || '1'
       } else {
-        // Multiple installations: show count only, not "base_value (count)" - THIS IS THE FIX
-        formattedUnit[col] = count.toString()
+        // Multiple installations: "base_value (count)"
+        const originalItem = data.find(item => item[unitColumn] === unit[unitColumn])
+        const baseValue = getBaseValue(col, originalItem?.[col])
+        formattedUnit[col] = `${baseValue || '1'} (${count})`
       }
     })
     
