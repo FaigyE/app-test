@@ -36,7 +36,9 @@ export function ReportDetailPage({
   isEditable = true,
 }: ReportDetailPageProps) {
   const { reportData, updateReportData, updateSectionTitle, setReportData } = useReportContext()
-  const { aeratorData, images, installationData: contextInstallationData } = reportData
+  const aeratorData = reportData?.aeratorData || []
+  const images = reportData?.images || []
+  const contextInstallationData = reportData?.installationData || []
   
   // Use installation data from props, context, or empty array as fallback
   const initialInstallationData = propInstallationData || contextInstallationData || []
@@ -311,7 +313,6 @@ export function ReportDetailPage({
             const storedNotes = getStoredNotes()
             if (storedNotes[newUnit]) {
               console.log("Unit added to details has a note, ensuring it appears in notes section:", newUnit)
-              // The notes section will automatically pick this up through the unified notes system
               // Dispatch event to notify notes section
               window.dispatchEvent(new Event("unifiedNotesUpdated"))
             }
@@ -495,6 +496,28 @@ const getInstalledValue = (row: any, columnType: string) => {
 }
 
   // Show a simple table with the installation data for now
+  if (!reportData) {
+    return (
+      <div className="print-section report-page min-h-[1056px] relative">
+        <div className="mb-8">
+          <img src="/images/greenlight-logo.png" alt="GreenLight Logo" className="h-24" crossOrigin="anonymous" />
+        </div>
+        <div className="mb-16">
+          <h2 className="text-xl font-bold mb-6">Loading...</h2>
+          <p className="text-gray-600">Loading report data...</p>
+        </div>
+        <div className="footer-container">
+          <img
+            src="/images/greenlight-footer.png"
+            alt="GreenLight Footer"
+            className="w-full h-auto"
+            crossOrigin="anonymous"
+          />
+        </div>
+      </div>
+    )
+  }
+
   if (allData.length === 0) {
     return (
       <div className="print-section report-page min-h-[1056px] relative">
@@ -505,13 +528,13 @@ const getInstalledValue = (row: any, columnType: string) => {
           <h2 className="text-xl font-bold mb-6">
             {isEditable ? (
               <EditableText
-                value={reportData.sections.detailPage.title}
+                value={reportData?.sections?.detailPage?.title || "Installation Details"}
                 onChange={(value) => updateSectionTitle("detailPage", value)}
                 placeholder="Section Title"
                 className="text-xl font-bold"
               />
             ) : (
-              reportData.sections.detailPage.title
+              reportData?.sections?.detailPage?.title || "Installation Details"
             )}
           </h2>
           <p className="text-gray-600">No installation data available. Please upload an Excel file first.</p>
@@ -539,13 +562,13 @@ const getInstalledValue = (row: any, columnType: string) => {
           <h2 className="text-xl font-bold">
             {isEditable ? (
               <EditableText
-                value={reportData.sections.detailPage.title}
+                value={reportData?.sections?.detailPage?.title || "Installation Details"}
                 onChange={(value) => updateSectionTitle("detailPage", value)}
                 placeholder="Section Title"
                 className="text-xl font-bold"
               />
             ) : (
-              reportData.sections.detailPage.title
+              reportData?.sections?.detailPage?.title || "Installation Details"
             )}
           </h2>
           {isEditable && (
@@ -654,7 +677,7 @@ const getInstalledValue = (row: any, columnType: string) => {
           </div>
 
           <div className="mb-16">
-            <h2 className="text-xl font-bold mb-6">{reportData.sections.detailPage.title}</h2>
+            <h2 className="text-xl font-bold mb-6">{reportData?.sections?.detailPage?.title || "Installation Details"}</h2>
 
             <div className="mb-6 overflow-hidden rounded-md border">
               <Table>
