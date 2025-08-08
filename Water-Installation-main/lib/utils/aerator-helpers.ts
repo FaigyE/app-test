@@ -87,13 +87,7 @@ const detectInstallationColumns = (data: any[]) => {
 // Helper function to get the base value for an installation type
 const getBaseValue = (columnName: string, value: any) => {
   if (!value || value === '0' || value === '') return null
-  
-  // If the value already contains GPM or other units, use it as is
-  if (typeof value === 'string' && (value.includes('GPM') || value.includes('Touch'))) {
-    return value
-  }
-  
-  // Default values based on column type
+
   const columnLower = columnName.toLowerCase()
   if (columnLower.includes('kitchen') && columnLower.includes('aerator')) {
     return '1.0 GPM'
@@ -105,9 +99,9 @@ const getBaseValue = (columnName: string, value: any) => {
     return '1.75 GPM'
   }
   if (columnLower.includes('toilet')) {
-    return 'Replaced'
+    return 'We replaced toilet'
   }
-  
+
   // If we can't determine the type, use the original value
   return value.toString()
 }
@@ -213,14 +207,12 @@ export const consolidateInstallationsByUnitV2 = (data: any[]) => {
       if (count === 0) {
         formattedUnit[col] = ''
       } else if (count === 1) {
-        // Get the base value from the original data
-        const originalItem = data.find(item => item[unitColumn] === unit[unitColumn])
-        const baseValue = getBaseValue(col, originalItem?.[col])
+        // Get the proper GPM value from the original data
+        const baseValue = getBaseValue(col, '1')
         formattedUnit[col] = baseValue || '1'
       } else {
         // Multiple installations: "base_value (count)"
-        const originalItem = data.find(item => item[unitColumn] === unit[unitColumn])
-        const baseValue = getBaseValue(col, originalItem?.[col])
+        const baseValue = getBaseValue(col, '1')
         formattedUnit[col] = `${baseValue || '1'} (${count})`
       }
     })
