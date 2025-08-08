@@ -200,7 +200,7 @@ export const consolidateInstallationsByUnitV2 = (data: any[]) => {
   // Format the consolidated data with proper display values
   return Object.values(consolidated).map((unit: any) => {
     const formattedUnit = { ...unit }
-  
+    
     installationColumns.forEach(col => {
       const count = unit[col]
       if (count === 0) {
@@ -213,24 +213,24 @@ export const consolidateInstallationsByUnitV2 = (data: any[]) => {
           formattedUnit[col] = `${baseValue} (${count})`
         }
       }
-    }
-  
+    })
+    
     // Join notes
     formattedUnit.Notes = unit.Notes.join('; ')
-  
+    
     return formattedUnit
   }).sort((a, b) => {
     const unitA = a[unitColumn]
     const unitB = b[unitColumn]
-  
+    
     // Try numeric sort first
     const numA = parseInt(unitA) || 0
     const numB = parseInt(unitB) || 0
-  
+    
     if (!isNaN(numA) && !isNaN(numB)) {
       return numA - numB
     }
-  
+    
     // Fallback to string sort
     return String(unitA).localeCompare(String(unitB), undefined, { 
       numeric: true, 
