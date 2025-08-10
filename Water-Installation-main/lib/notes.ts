@@ -110,55 +110,149 @@ export function compileAllNotes({
 }
 
 // Unified notes management functions
-export const loadNotesFromLocalStorage = (): Note[] => {
-  if (typeof window === "undefined") {
-    return []
-  }
-  try {
-    const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY)
-    return storedNotes ? JSON.parse(storedNotes) : []
-  } catch (error) {
-    console.error("Failed to load notes from local storage:", error)
-    return []
-  }
-}
+export function loadNotesFromLocalStorage(): Note[] {
+  if (typeof window === "undefined") return []
 
-export const saveNotesToLocalStorage = (notes: Note[]): void => {
-  if (typeof window === "undefined") {
-    return
-  }
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes))
-  } catch (error) {
-    console.error("Failed to save notes to local storage:", error)
-  }
-}
-
-export const getStoredNotes = (): Record<string, string> => {
-  if (typeof window === "undefined") {
-    return {}
-  }
-  try {
-    const storedNotes = localStorage.getItem(LOCAL_STORAGE_KEY)
+    const storedNotes = localStorage.getItem("unifiedNotes")
     if (storedNotes) {
-      // If it's the new array format, convert it to the old map format for this function
-      const parsedNotes: Note[] = JSON.parse(storedNotes)
-      return parsedNotes.reduce((acc: Record<string, string>, note) => {
-        // Only add notes that have valid content
-        if (note.content && note.content.trim() && note.content !== "undefined") {
-          acc[note.unit] = note.content
-        }
-        return acc
-      }, {})
+      const parsedNotes = JSON.parse(storedNotes)
+      console.log("Notes: Loaded unified notes from localStorage:", parsedNotes)
+
+      // Filter out any notes with undefined content
+      return parsedNotes.filter(
+        (note: Note) =>
+          note &&
+          note.content &&
+          typeof note.content === "string" &&
+          note.content.trim() !== "" &&
+          note.content !== "undefined",
+      )
     }
-    return {}
   } catch (error) {
-    console.error("Failed to get stored notes:", error)
-    return {}
+    console.error("Error loading notes from localStorage:", error)
+  }
+
+  return []
+}
+
+export function saveNotesToLocalStorage(notes: Note[]): void {
+  if (typeof window === "undefined") return
+
+  try {
+    // Filter out invalid notes before saving
+    const validNotes = notes.filter(
+      (note) =>
+        note &&
+        note.content &&
+        typeof note.content === "string" &&
+        note.content.trim() !== "" &&
+        note.content !== "undefined",
+    )
+
+    localStorage.setItem("unifiedNotes", JSON.stringify(validNotes))
+    console.log("Notes: Saved unified notes to localStorage:", validNotes)
+
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent("notesUpdated", { detail: validNotes }))
+  } catch (error) {
+    console.error("Error saving notes to localStorage:", error)
   }
 }
 
-export const updateStoredNote = (unit: string, noteContent: string): void => {
+export function getStoredNotes(): Note[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const installationDataStr = localStorage.getItem("installationData")
+    const selectedCellsStr = localStorage.getItem("selectedCells")
+    const selectedNotesColumnsStr = localStorage.getItem("selectedNotesColumns")
+
+    if (!installationDataStr) {
+      console.log("Notes: No installation data available")
+      return []
+    }
+
+    const installationData = JSON.parse(installationDataStr)
+    const selectedCells = selectedCellsStr ? JSON.parse(selectedCellsStr) : {}
+    const selectedNotesColumns = selectedNotesColumnsStr ? JSON.parse(selectedNotesColumnsStr) : []
+
+    console.log("Notes: Processing installation data, length:", installationData.length)
+    console.log("Notes: Loaded selected cells from preview:", selectedCells)
+    console.log("Notes: Loaded selected notes columns from preview:", selectedNotesColumns)
+
+    if (installationData.length === 0) {
+      console.log("Notes: No installation data available")
+      return []
+    }
+
+    // Find unit column
+    const allColumnNames = Object.keys(installationData[0] || {})
+    console.log("Notes: All column names for unit detection:", allColumnNames)
+
+    const unitColumn = allColumnNames.find((col) => col.toLowerCase().includes("unit")) || allColumnNames[0]
+    console.log("Notes: Found unit column:", unitColumn)
+    console.log("Notes: Using unit column:", unitColumn)
+
+    console.log("Notes: Using unified notes system...")
+
+    const processedNotes: Note[] = []
+
+    installationData.forEach((row: any) => {
+      const unit = row[unitColumn]
+      if (!unit || unit.toString().trim() === "") return
+
+      let noteContent = ""
+
+      // Add notes from selected columns
+      selectedNotesColumns.forEach((col: string) => {
+        const value = row[col]
+        if (
+          value &&
+          typeof value === "string" &&
+          value.trim() !== "" &&
+          value !== "undefined" &&
+          value.toLowerCase() !== "undefined"
+        ) {
+          noteContent += `${col}: ${value}. `
+        } else if (value && typeof value === "number") {
+          noteContent += `${col}: ${value}. `
+        }
+      })
+
+      // Add notes from selected cells
+      const unitCells = selectedCells[unit.toString()]
+      if (unitCells && Array.isArray(unitCells)) {
+        unitCells.forEach((cellInfo: string) => {
+          if (cellInfo && typeof cellInfo === "string" && cellInfo.trim() !== "" && !cellInfo.includes("undefined")) {
+            noteContent += `${cellInfo}. `
+          }
+        })
+      }
+
+      // Only add note if there's actual content
+      const finalContent = noteContent.trim()
+      if (finalContent && finalContent !== "" && !finalContent.includes("undefined")) {
+        console.log(`Notes: Adding note for unit ${unit}: "${finalContent}"`)
+        processedNotes.push({
+          id: `note-${unit}`,
+          unit: unit.toString(),
+          content: finalContent,
+        })
+      } else {
+        console.log(`Notes: Skipping note for unit ${unit}, no valid content`)
+      }
+    })
+
+    console.log("Notes: Final processed notes:", processedNotes.length, "notes")
+    return processedNotes
+  } catch (error) {
+    console.error("Error processing notes:", error)
+    return []
+  }
+}
+
+export function updateStoredNote(unit: string, noteContent: string): void {
   if (typeof window === "undefined") {
     return
   }
@@ -179,110 +273,7 @@ export const updateStoredNote = (unit: string, noteContent: string): void => {
   }
 }
 
-interface GetUnifiedNotesParams {
-  installationData: any[]
-  unitColumn: string
-  selectedCells: Record<string, string[]>
-  selectedNotesColumns: string[]
-}
-
-export const getUnifiedNotes = ({
-  installationData,
-  unitColumn,
-  selectedCells,
-  selectedNotesColumns,
-}: GetUnifiedNotesParams): Note[] => {
-  const compiledNotes: Record<string, string> = {}
-
-  // 1. Compile notes from selected cells
-  for (const unitKey in selectedCells) {
-    const notesForUnit = selectedCells[unitKey].join(". ")
-    if (notesForUnit.trim()) {
-      compiledNotes[unitKey] = (compiledNotes[unitKey] || "") + notesForUnit + ". "
-    }
-  }
-
-  // 2. Compile notes from selected columns for each unit
-  installationData.forEach((item) => {
-    const unit = item[unitColumn]
-    if (unit) {
-      let unitNotes = ""
-      selectedNotesColumns.forEach((col) => {
-        if (item[col] && item[col].trim()) {
-          unitNotes += `${item[col]}. `
-        }
-      })
-      if (unitNotes.trim()) {
-        compiledNotes[unit] = (compiledNotes[unit] || "") + unitNotes
-      }
-    }
-  })
-
-  // 3. Compile notes from specific "Leak Issue" columns
-  installationData.forEach((item) => {
-    const unit = item[unitColumn]
-    if (unit) {
-      let leakNotes = ""
-
-      if (item["Leak Issue Kitchen Faucet"] && item["Leak Issue Kitchen Faucet"].trim()) {
-        leakNotes += `Kitchen Faucet Leak: ${item["Leak Issue Kitchen Faucet"]}. `
-      }
-      if (item["Leak Issue Bath Faucet"] && item["Leak Issue Bath Faucet"].trim()) {
-        leakNotes += `Bathroom Faucet Leak: ${item["Leak Issue Bath Faucet"]}. `
-      }
-      if (item["Tub Spout/Diverter Leak Issue"] && item["Tub Spout/Diverter Leak Issue"].trim()) {
-        leakNotes += `Tub Spout/Diverter Leak: ${item["Tub Spout/Diverter Leak Issue"]}. `
-      }
-
-      if (leakNotes.trim()) {
-        compiledNotes[unit] = (compiledNotes[unit] || "") + leakNotes
-      }
-    }
-  })
-
-  // 4. Load and merge manually added/edited notes from local storage (new format)
-  const manuallyAddedNotes = loadNotesFromLocalStorage()
-  manuallyAddedNotes.forEach((note) => {
-    // Only process notes that have actual content
-    if (note.content && note.content.trim() && note.content !== "undefined") {
-      if (compiledNotes[note.unit]) {
-        compiledNotes[note.unit] = (compiledNotes[note.unit] || "") + note.content
-      } else {
-        compiledNotes[note.unit] = note.content
-      }
-    }
-  })
-
-  // Convert the compiledNotes map to the Note[] array format, filtering out empty notes
-  const finalNotes: Note[] = Object.entries(compiledNotes)
-    .filter(([unit, content]) => content && content.trim() && content !== "undefined")
-    .map(([unit, content], index) => ({
-      id: `auto-${index}-${Date.now()}`, // Generate a unique ID
-      unit,
-      content: content.trim(),
-      timestamp: Date.now(),
-    }))
-
-  // Sort notes by unit number
-  return finalNotes.sort((a, b) => {
-    const unitA = a.unit || ""
-    const unitB = b.unit || ""
-
-    // Try to parse as numbers first
-    const numA = Number.parseInt(unitA)
-    const numB = Number.parseInt(unitB)
-
-    // If both are valid numbers, sort numerically
-    if (!isNaN(numA) && !isNaN(numB)) {
-      return numA - numB
-    }
-
-    // Otherwise, sort alphabetically
-    return unitA.localeCompare(unitB, undefined, { numeric: true, sensitivity: "base" })
-  })
-}
-
-export const clearNotesFromLocalStorage = () => {
+export function clearNotesFromLocalStorage() {
   try {
     localStorage.removeItem(LOCAL_STORAGE_KEY)
   } catch (error) {
