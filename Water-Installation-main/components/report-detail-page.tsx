@@ -308,7 +308,7 @@ export function ReportDetailPage({
             return updated
           })
 
-          // If this is a new unit being added and it has a note, ensure the note appears in the notes section
+          // If this is a new unit being added and it has a note, ensure it appears in the notes section
           if (newUnit && newUnit.trim() !== "" && originalUnit === "") {
             const storedNotes = getStoredNotes()
             if (storedNotes[newUnit]) {
@@ -445,6 +445,25 @@ export function ReportDetailPage({
     }
   }, [contextInstallationData, installationData.length])
 
+  // Add this useEffect right after the existing useEffect
+  useEffect(() => {
+    // Force load installation data if missing
+    if ((!reportData?.installationData || reportData.installationData.length === 0) && !propInstallationData) {
+      const storedInstallationData = localStorage.getItem("installationData")
+      if (storedInstallationData) {
+        try {
+          const parsedData = JSON.parse(storedInstallationData)
+          console.log("ReportDetailPage: Force loading installation data from localStorage:", parsedData.length)
+          setInstallationData(parsedData)
+          // Also update the report context
+          updateReportData("installationData", parsedData)
+        } catch (error) {
+          console.error("Error parsing stored installation data:", error)
+        }
+      }
+    }
+  }, [reportData, propInstallationData, updateReportData])
+
   // Listen for unified notes updates
   useEffect(() => {
     const handleNotesUpdate = () => {
@@ -496,7 +515,7 @@ const getInstalledValue = (row: any, columnType: string) => {
 }
 
   // Show a simple table with the installation data for now
-  if (!reportData) {
+  if (!reportData || (!reportData.installationData && !propInstallationData)) {
     return (
       <div className="print-section report-page min-h-[1056px] relative">
         <div className="mb-8">
@@ -505,6 +524,11 @@ const getInstalledValue = (row: any, columnType: string) => {
         <div className="mb-16">
           <h2 className="text-xl font-bold mb-6">Loading...</h2>
           <p className="text-gray-600">Loading report data...</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Debug: reportData exists: {reportData ? 'Yes' : 'No'}, 
+            installationData length: {reportData?.installationData?.length || 0},
+            propInstallationData length: {propInstallationData?.length || 0}
+          </p>
         </div>
         <div className="footer-container">
           <img
