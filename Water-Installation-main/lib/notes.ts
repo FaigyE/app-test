@@ -144,7 +144,10 @@ export const getStoredNotes = (): Record<string, string> => {
       // If it's the new array format, convert it to the old map format for this function
       const parsedNotes: Note[] = JSON.parse(storedNotes)
       return parsedNotes.reduce((acc: Record<string, string>, note) => {
-        acc[note.unit] = note.content || "" // Ensure we never store undefined
+        // Only add notes that have valid content
+        if (note.content && note.content.trim() && note.content !== "undefined") {
+          acc[note.unit] = note.content
+        }
         return acc
       }, {})
     }
