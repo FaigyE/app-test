@@ -44,10 +44,30 @@ export function ReportDetailPage({
   const images = reportData?.images || []
   const contextInstallationData = reportData?.installationData || []
 
-  // Use installation data from props, context, or empty array as fallback
-  const initialInstallationData = propInstallationData || contextInstallationData || []
+  // Use installation data from props, context, or localStorage as fallback
+  const [installationData, setInstallationData] = useState<InstallationData[]>(() => {
+    if (propInstallationData && propInstallationData.length > 0) {
+      return propInstallationData
+    }
+    if (contextInstallationData && contextInstallationData.length > 0) {
+      return contextInstallationData
+    }
+    // Try to load from localStorage as final fallback
+    if (typeof window !== "undefined") {
+      const storedData = localStorage.getItem("installationData")
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData)
+          console.log("ReportDetailPage: Loaded from localStorage:", parsed.length, "rows")
+          return parsed
+        } catch (error) {
+          console.error("Error parsing localStorage installationData:", error)
+        }
+      }
+    }
+    return []
+  })
 
-  const [installationData, setInstallationData] = useState<InstallationData[]>(initialInstallationData)
   const [additionalRows, setAdditionalRows] = useState<InstallationData[]>([])
   const [editedNotes, setEditedNotes] = useState<Record<string, string>>({})
   const [editedInstallations, setEditedInstallations] = useState<Record<string, Record<string, string>>>({})
@@ -408,12 +428,6 @@ export function ReportDetailPage({
 
   useEffect(() => {
     try {
-      // Load installation data from context if not already loaded
-      if (installationData.length === 0 && contextInstallationData && contextInstallationData.length > 0) {
-        console.log("ReportDetailPage: Loading installation data from context")
-        setInstallationData(contextInstallationData)
-      }
-
       const storedAdditionalRows = localStorage.getItem("additionalDetailRows")
       if (storedAdditionalRows) {
         setAdditionalRows(JSON.parse(storedAdditionalRows))
@@ -447,12 +461,11 @@ export function ReportDetailPage({
     } catch (error) {
       console.error("Error loading data from localStorage:", error)
     }
-  }, [contextInstallationData, installationData.length])
+  }, [])
 
-  // Add this useEffect right after the existing useEffect
+  // Force load installation data if missing
   useEffect(() => {
-    // Force load installation data if missing
-    if ((!reportData?.installationData || reportData.installationData.length === 0) && !propInstallationData) {
+    if (installationData.length === 0) {
       const storedInstallationData = localStorage.getItem("installationData")
       if (storedInstallationData) {
         try {
@@ -466,7 +479,7 @@ export function ReportDetailPage({
         }
       }
     }
-  }, [reportData, propInstallationData, updateReportData])
+  }, [installationData.length, updateReportData])
 
   // Listen for unified notes updates
   useEffect(() => {
@@ -518,8 +531,8 @@ export function ReportDetailPage({
     return value
   }
 
-  // Show a simple table with the installation data for now
-  if (!reportData || (!reportData.installationData && !propInstallationData)) {
+  // Show loading state only if we have no data at all
+  if (installationData.length === 0 && allData.length === 0) {
     return (
       <div className="print-section report-page min-h-[1056px] relative">
         <div className="mb-8">
@@ -529,9 +542,7 @@ export function ReportDetailPage({
           <h2 className="text-xl font-bold mb-6">Loading...</h2>
           <p className="text-gray-600">Loading report data...</p>
           <p className="text-sm text-gray-500 mt-2">
-            Debug: reportData exists: {reportData ? "Yes" : "No"}, installationData length:{" "}
-            {reportData?.installationData?.length || 0}, propInstallationData length:{" "}
-            {propInstallationData?.length || 0}
+            Debug: installationData length: {installationData.length}, allData length: {allData.length}
           </p>
         </div>
         <div className="footer-container">
