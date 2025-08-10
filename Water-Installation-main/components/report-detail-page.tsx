@@ -80,7 +80,7 @@ export function ReportDetailPage({
     toilet: "Toilet Installed",
     notes: "Notes",
   })
-  const { addToast } = useToast()
+  const { toast } = useToast()
 
   console.log("ReportDetailPage: installationData length:", installationData.length)
   console.log("ReportDetailPage: contextInstallationData length:", contextInstallationData?.length || 0)
@@ -282,7 +282,7 @@ export function ReportDetailPage({
         })
       }
     },
-    [additionalRows, setAdditionalRows, unitColumn, setEditedInstallations, setReportData, isEditable],
+    [additionalRows, setAdditionalRows, unitColumn, setEditedInstallations, setReportData, isEditable, allData],
   )
 
   const handleUnitEdit = (originalUnit: string, newUnit: string) => {
@@ -371,9 +371,12 @@ export function ReportDetailPage({
       localStorage.setItem("additionalDetailRows", JSON.stringify(updatedRows))
 
       console.log("New row added successfully!")
-      addToast("New row added. Remember to fill in the Unit number.", "info")
+      toast({
+        title: "Row Added",
+        description: "New row added. Remember to fill in the Unit number.",
+      })
     }
-  }, [additionalRows, setAdditionalRows, addToast, isEditable])
+  }, [additionalRows, setAdditionalRows, toast, isEditable])
 
   const handleDeleteRow = useCallback(
     (unitToDelete: string) => {
@@ -384,10 +387,13 @@ export function ReportDetailPage({
           ...prev,
           aeratorData: prev.aeratorData.filter((data) => data.Unit !== unitToDelete),
         }))
-        addToast(`Row for Unit ${unitToDelete} deleted.`, "info")
+        toast({
+          title: "Row Deleted",
+          description: `Row for Unit ${unitToDelete} deleted.`,
+        })
       }
     },
-    [setAdditionalRows, setInstallationData, setReportData, addToast, isEditable],
+    [setAdditionalRows, setInstallationData, setReportData, toast, isEditable],
   )
 
   const headers = useMemo(() => {
@@ -637,7 +643,7 @@ export function ReportDetailPage({
             <TableBody>
               {allData.slice(0, 20).map((row, rowIndex) => (
                 <TableRow key={rowIndex}>
-                  <TableCell>{row.Unit || row[unitColumn] || ""}</TableCell>
+                  <TableCell>{row.Unit || row[unitColumn || ""] || ""}</TableCell>
                   <TableCell>{getExistingValue(row, "Kitchen Aerator")}</TableCell>
                   <TableCell>{getInstalledValue(row, "Kitchen Aerator")}</TableCell>
                   <TableCell>{getExistingValue(row, "Bathroom aerator")}</TableCell>
@@ -663,9 +669,7 @@ export function ReportDetailPage({
                 alt={image.alt}
                 width={300}
                 height={200}
-                layout="responsive"
-                objectFit="contain"
-                className="h-48 w-full rounded-md"
+                className="h-48 w-full rounded-md object-contain"
               />
               <EditableText
                 as="p"
@@ -690,7 +694,7 @@ export function ReportDetailPage({
           ))}
         </div>
         <div className="no-print">
-          <ImageUploader />
+          <ImageUploader onImageUpload={handleImageUpload} />
         </div>
       </div>
 
@@ -735,7 +739,7 @@ export function ReportDetailPage({
                 <TableBody>
                   {pageData.map((row, rowIndex) => (
                     <TableRow key={rowIndex}>
-                      <TableCell>{row.Unit || row[unitColumn] || ""}</TableCell>
+                      <TableCell>{row.Unit || row[unitColumn || ""] || ""}</TableCell>
                       <TableCell>{getExistingValue(row, "Kitchen Aerator")}</TableCell>
                       <TableCell>{getInstalledValue(row, "Kitchen Aerator")}</TableCell>
                       <TableCell>{getExistingValue(row, "Bathroom aerator")}</TableCell>
@@ -757,9 +761,7 @@ export function ReportDetailPage({
                     alt={image.alt}
                     width={300}
                     height={200}
-                    layout="responsive"
-                    objectFit="contain"
-                    className="h-48 w-full rounded-md"
+                    className="h-48 w-full rounded-md object-contain"
                   />
                   <p className="mt-2 text-center text-sm text-gray-600">{image.alt}</p>
                 </div>
