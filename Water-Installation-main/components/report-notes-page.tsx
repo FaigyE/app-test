@@ -16,126 +16,101 @@ export function ReportNotesPage({ isEditable = true }: ReportNotesPageProps) {
 
   useEffect(() => {
     const loadNotes = () => {
-      console.log("Notes: Loading installation data from localStorage")
-      const storedInstallationData = localStorage.getItem("installationData")
-
-      if (!storedInstallationData) {
-        console.log("Notes: No installation data available")
-        return
-      }
+      console.log("Notes: Starting fresh approach - loading installation data")
 
       try {
-        const installationData = JSON.parse(storedInstallationData)
-        console.log("Notes: Processing installation data, length:", installationData.length)
-
-        if (!installationData || installationData.length === 0) {
-          console.log("Notes: No installation data available")
+        const storedInstallationData = localStorage.getItem("installationData")
+        if (!storedInstallationData) {
+          console.log("Notes: No installation data found")
+          setNotes([])
           return
         }
+
+        const installationData = JSON.parse(storedInstallationData)
+        console.log("Notes: Loaded installation data:", installationData.length, "rows")
 
         // Find unit column
         const findUnitColumn = (data: any[]): string => {
           if (!data || data.length === 0) return "Unit"
-
           const item = data[0]
-          console.log("Notes: All column names for unit detection:", Object.keys(item))
-
           const unitKeywords = ["unit", "apt", "apartment", "room", "bldg/unit"]
 
           for (const key of Object.keys(item)) {
             if (unitKeywords.some((keyword) => key.toLowerCase().includes(keyword))) {
-              console.log("Notes: Found unit column:", key)
               return key
             }
           }
-
           return Object.keys(item)[0]
         }
 
         const unitColumn = findUnitColumn(installationData)
         console.log("Notes: Using unit column:", unitColumn)
 
-        // Load selected cells and columns from localStorage
+        // Load selections from localStorage
         const selectedCells = JSON.parse(localStorage.getItem("selectedCells") || "{}")
         const selectedNotesColumns = JSON.parse(localStorage.getItem("selectedNotesColumns") || "[]")
-
-        console.log("Notes: Loaded selected cells from preview:", selectedCells)
-        console.log("Notes: Loaded selected notes columns from preview:", selectedNotesColumns)
-
-        // Get stored notes
         const storedNotes = getStoredNotes()
-        console.log("Notes: Using unified notes system...")
 
-        // Process notes from installation data and stored notes
+        console.log("Notes: Loaded selections:", { selectedCells, selectedNotesColumns, storedNotes })
+
+        // Process notes with strict validation
         const processedNotes: Array<{ unit: string; note: string }> = []
 
-        installationData.forEach((row: any) => {
+        installationData.forEach((row: any, index: number) => {
           const unit = row[unitColumn]
-          if (!unit) return
 
+          // Skip if no valid unit
+          if (!unit || typeof unit !== "string" || unit.trim() === "") {
+            console.log(`Notes: Skipping row ${index} - invalid unit:`, unit)
+            return
+          }
+
+          const unitStr = unit.toString().trim()
           let compiledNote = ""
 
-          // Add notes from selected columns
+          // Add notes from selected columns - with strict validation
           selectedNotesColumns.forEach((col: string) => {
             const value = row[col]
-            if (
-              value &&
-              typeof value === "string" &&
-              value.trim() !== "" &&
-              value.trim() !== "undefined" &&
-              value.toLowerCase() !== "undefined"
-            ) {
-              compiledNote += `${col}: ${value}. `
-            } else if (value && typeof value === "number") {
-              compiledNote += `${col}: ${value}. `
+            if (value !== null && value !== undefined && value !== "" && String(value).trim() !== "") {
+              const valueStr = String(value).trim()
+              if (valueStr !== "undefined" && !valueStr.includes("undefined")) {
+                compiledNote += `${col}: ${valueStr}. `
+              }
             }
           })
 
-          // Add notes from selected cells
-          if (selectedCells[unit]) {
-            selectedCells[unit].forEach((cellInfo: string) => {
-              if (
-                cellInfo &&
-                typeof cellInfo === "string" &&
-                cellInfo.trim() !== "" &&
-                cellInfo.trim() !== "undefined" &&
-                cellInfo.toLowerCase() !== "undefined" &&
-                !cellInfo.includes("undefined")
-              ) {
-                compiledNote += `${cellInfo}. `
+          // Add notes from selected cells - with strict validation
+          if (selectedCells[unitStr] && Array.isArray(selectedCells[unitStr])) {
+            selectedCells[unitStr].forEach((cellInfo: string) => {
+              if (cellInfo && typeof cellInfo === "string" && cellInfo.trim() !== "") {
+                const cellStr = cellInfo.trim()
+                if (cellStr !== "undefined" && !cellStr.includes("undefined")) {
+                  compiledNote += `${cellStr}. `
+                }
               }
             })
           }
 
-          // Add manually stored notes
-          const storedNote = storedNotes[unit]
-          if (
-            storedNote &&
-            storedNote.trim() !== "" &&
-            storedNote.trim() !== "undefined" &&
-            storedNote.toLowerCase() !== "undefined"
-          ) {
-            compiledNote += storedNote
+          // Add manually stored notes - with strict validation
+          const storedNote = storedNotes[unitStr]
+          if (storedNote && typeof storedNote === "string" && storedNote.trim() !== "") {
+            const storedStr = storedNote.trim()
+            if (storedStr !== "undefined" && !storedStr.includes("undefined")) {
+              compiledNote += storedStr
+            }
           }
 
           const finalNote = compiledNote.trim()
 
-          // Enhanced validation to ensure no undefined values make it through
-          const hasValidContent =
-            finalNote &&
-            finalNote !== "" &&
-            finalNote !== "undefined" &&
-            finalNote.toLowerCase() !== "undefined" &&
-            !finalNote.includes("undefined") &&
-            finalNote.length > 0
-
-          console.log(`Notes: Filtering note for unit ${unit}, has content: ${hasValidContent}, note: "${finalNote}"`)
-
-          if (hasValidContent) {
+          // Only add if we have actual content
+          if (finalNote && finalNote !== "" && finalNote !== "undefined" && !finalNote.includes("undefined")) {
+            console.log(`Notes: Adding note for unit ${unitStr}:`, finalNote)
             processedNotes.push({
-              unit: unit,
+              unit: unitStr,
               note: finalNote,
             })
+          } else {
+            console.log(`Notes: Skipping unit ${unitStr} - no valid content`)
           }
         })
 
@@ -149,18 +124,21 @@ export function ReportNotesPage({ isEditable = true }: ReportNotesPageProps) {
           return a.unit.localeCompare(b.unit, undefined, { numeric: true, sensitivity: "base" })
         })
 
-        console.log("Notes: Final processed notes:", processedNotes.length, "notes")
+        console.log("Notes: Final processed notes:", processedNotes.length)
+        console.log("Notes: Sample notes:", processedNotes.slice(0, 3))
+
         setNotes(processedNotes)
       } catch (error) {
-        console.error("Error processing notes:", error)
+        console.error("Notes: Error processing notes:", error)
+        setNotes([])
       }
     }
 
     loadNotes()
 
-    // Listen for unified notes updates
+    // Listen for updates
     const handleNotesUpdate = () => {
-      console.log("Notes: Received unified notes update event")
+      console.log("Notes: Received update event")
       loadNotes()
     }
 
@@ -169,10 +147,12 @@ export function ReportNotesPage({ isEditable = true }: ReportNotesPageProps) {
   }, [])
 
   const handleNoteEdit = (unit: string, value: string) => {
-    if (isEditable) {
-      updateStoredNote(unit, value)
-      // Update local state immediately
-      setNotes((prev) => prev.map((note) => (note.unit === unit ? { ...note, note: value } : note)))
+    if (isEditable && value !== undefined && value !== null) {
+      const cleanValue = String(value).trim()
+      if (cleanValue !== "undefined" && !cleanValue.includes("undefined")) {
+        updateStoredNote(unit, cleanValue)
+        setNotes((prev) => prev.map((note) => (note.unit === unit ? { ...note, note: cleanValue } : note)))
+      }
     }
   }
 
@@ -206,25 +186,39 @@ export function ReportNotesPage({ isEditable = true }: ReportNotesPageProps) {
           <p className="text-gray-600 italic">No installation notes available.</p>
         ) : (
           <div className="space-y-4">
-            {notes.map((noteItem, index) => (
-              <div key={index} className="border-b border-gray-200 pb-3">
-                <div className="flex items-start gap-3">
-                  <span className="font-semibold text-gray-800 min-w-[80px]">Unit {noteItem.unit}:</span>
-                  <div className="flex-1">
-                    {isEditable ? (
-                      <EditableText
-                        value={noteItem.note}
-                        onChange={(value) => handleNoteEdit(noteItem.unit, value)}
-                        placeholder="Add note..."
-                        className="text-gray-700"
-                      />
-                    ) : (
-                      <span className="text-gray-700">{noteItem.note}</span>
-                    )}
+            {notes.map((noteItem, index) => {
+              // Additional safety check before rendering
+              if (
+                !noteItem ||
+                !noteItem.unit ||
+                !noteItem.note ||
+                noteItem.note === "undefined" ||
+                noteItem.note.includes("undefined")
+              ) {
+                console.warn("Notes: Skipping invalid note item:", noteItem)
+                return null
+              }
+
+              return (
+                <div key={`${noteItem.unit}-${index}`} className="border-b border-gray-200 pb-3">
+                  <div className="flex items-start gap-3">
+                    <span className="font-semibold text-gray-800 min-w-[80px]">Unit {noteItem.unit}:</span>
+                    <div className="flex-1">
+                      {isEditable ? (
+                        <EditableText
+                          value={noteItem.note}
+                          onChange={(value) => handleNoteEdit(noteItem.unit, value)}
+                          placeholder="Add note..."
+                          className="text-gray-700"
+                        />
+                      ) : (
+                        <span className="text-gray-700">{noteItem.note}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
