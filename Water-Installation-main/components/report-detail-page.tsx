@@ -1,10 +1,14 @@
 "use client"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import EditableText from "@/components/editable-text"
-import { summarizeAeratorSavings, getAeratorSummaryTable, consolidateInstallationsByUnitV2 } from "@/lib/utils/aerator-helpers"
+import {
+  summarizeAeratorSavings,
+  getAeratorSummaryTable,
+  consolidateInstallationsByUnitV2,
+} from "@/lib/utils/aerator-helpers"
 import { useReportContext } from "@/lib/report-context"
 import { Button } from "@/components/ui/button"
-import { Plus, XCircle } from 'lucide-react'
+import { Plus, XCircle } from "lucide-react"
 import { updateStoredNote, getStoredNotes } from "@/lib/notes"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import Image from "next/image"
@@ -39,10 +43,10 @@ export function ReportDetailPage({
   const aeratorData = reportData?.aeratorData || []
   const images = reportData?.images || []
   const contextInstallationData = reportData?.installationData || []
-  
+
   // Use installation data from props, context, or empty array as fallback
   const initialInstallationData = propInstallationData || contextInstallationData || []
-  
+
   const [installationData, setInstallationData] = useState<InstallationData[]>(initialInstallationData)
   const [additionalRows, setAdditionalRows] = useState<InstallationData[]>([])
   const [editedNotes, setEditedNotes] = useState<Record<string, string>>({})
@@ -409,7 +413,7 @@ export function ReportDetailPage({
         console.log("ReportDetailPage: Loading installation data from context")
         setInstallationData(contextInstallationData)
       }
-      
+
       const storedAdditionalRows = localStorage.getItem("additionalDetailRows")
       if (storedAdditionalRows) {
         setAdditionalRows(JSON.parse(storedAdditionalRows))
@@ -476,66 +480,67 @@ export function ReportDetailPage({
     return () => window.removeEventListener("unifiedNotesUpdated", handleNotesUpdate)
   }, [])
 
-const getExistingValue = (row: any, columnType: string) => {
-  const value = row[columnType]
-  if (!value || value === '0' || value === '') return ''
-  
-  // For existing values, show what was there before (typically higher GPM)
-  if (columnType.toLowerCase().includes('kitchen') && columnType.toLowerCase().includes('aerator')) {
-    return '2.2 GPM'
-  }
-  if (columnType.toLowerCase().includes('bathroom') && columnType.toLowerCase().includes('aerator')) {
-    return '2.2 GPM'
-  }
-  if (columnType.toLowerCase().includes('shower')) {
-    return '2.5 GPM'
-  }
-  return value
-}
+  const getExistingValue = (row: any, columnType: string) => {
+    const value = row[columnType]
+    if (!value || value === "0" || value === "") return ""
 
-const getInstalledValue = (row: any, columnType: string) => {
-  const value = row[columnType]
-  if (!value || value === '0' || value === '') return 'No Touch'
-  
-  // Check if this is already a consolidated value with count
-  if (typeof value === 'string' && value.includes('(') && value.includes(')')) {
-    return value // Already formatted like "1.0 GPM (2)"
+    // For existing values, show what was there before (typically higher GPM)
+    if (columnType.toLowerCase().includes("kitchen") && columnType.toLowerCase().includes("aerator")) {
+      return "2.2 GPM"
+    }
+    if (columnType.toLowerCase().includes("bathroom") && columnType.toLowerCase().includes("aerator")) {
+      return "2.2 GPM"
+    }
+    if (columnType.toLowerCase().includes("shower")) {
+      return "2.5 GPM"
+    }
+    return value
   }
-  
-  if (columnType.toLowerCase().includes('kitchen') && columnType.toLowerCase().includes('aerator')) {
-    return '1.0 GPM'
+
+  const getInstalledValue = (row: any, columnType: string) => {
+    const value = row[columnType]
+    if (!value || value === "0" || value === "") return "No Touch"
+
+    // Check if this is already a consolidated value with count
+    if (typeof value === "string" && value.includes("(") && value.includes(")")) {
+      return value // Already formatted like "1.0 GPM (2)"
+    }
+
+    if (columnType.toLowerCase().includes("kitchen") && columnType.toLowerCase().includes("aerator")) {
+      return "1.0 GPM"
+    }
+    if (columnType.toLowerCase().includes("bathroom") && columnType.toLowerCase().includes("aerator")) {
+      return "1.0 GPM"
+    }
+    if (columnType.toLowerCase().includes("shower")) {
+      return "1.75 GPM"
+    }
+    return value
   }
-  if (columnType.toLowerCase().includes('bathroom') && columnType.toLowerCase().includes('aerator')) {
-    return '1.0 GPM'
-  }
-  if (columnType.toLowerCase().includes('shower')) {
-    return '1.75 GPM'
-  }
-  return value
-}
 
   // Show a simple table with the installation data for now
   if (!reportData || (!reportData.installationData && !propInstallationData)) {
     return (
       <div className="print-section report-page min-h-[1056px] relative">
         <div className="mb-8">
-          <img src="/images/greenlight-logo.png" alt="GreenLight Logo" className="h-24" crossOrigin="anonymous" />
+          <Image src="/images/greenlight-logo.png" alt="GreenLight Logo" width={150} height={96} className="h-24" />
         </div>
         <div className="mb-16">
           <h2 className="text-xl font-bold mb-6">Loading...</h2>
           <p className="text-gray-600">Loading report data...</p>
           <p className="text-sm text-gray-500 mt-2">
-            Debug: reportData exists: {reportData ? 'Yes' : 'No'}, 
-            installationData length: {reportData?.installationData?.length || 0},
-            propInstallationData length: {propInstallationData?.length || 0}
+            Debug: reportData exists: {reportData ? "Yes" : "No"}, installationData length:{" "}
+            {reportData?.installationData?.length || 0}, propInstallationData length:{" "}
+            {propInstallationData?.length || 0}
           </p>
         </div>
         <div className="footer-container">
-          <img
+          <Image
             src="/images/greenlight-footer.png"
             alt="GreenLight Footer"
+            width={800}
+            height={100}
             className="w-full h-auto"
-            crossOrigin="anonymous"
           />
         </div>
       </div>
@@ -546,7 +551,7 @@ const getInstalledValue = (row: any, columnType: string) => {
     return (
       <div className="print-section report-page min-h-[1056px] relative">
         <div className="mb-8">
-          <img src="/images/greenlight-logo.png" alt="GreenLight Logo" className="h-24" crossOrigin="anonymous" />
+          <Image src="/images/greenlight-logo.png" alt="GreenLight Logo" width={150} height={96} className="h-24" />
         </div>
         <div className="mb-16">
           <h2 className="text-xl font-bold mb-6">
@@ -564,11 +569,12 @@ const getInstalledValue = (row: any, columnType: string) => {
           <p className="text-gray-600">No installation data available. Please upload an Excel file first.</p>
         </div>
         <div className="footer-container">
-          <img
+          <Image
             src="/images/greenlight-footer.png"
             alt="GreenLight Footer"
+            width={800}
+            height={100}
             className="w-full h-auto"
-            crossOrigin="anonymous"
           />
         </div>
       </div>
@@ -578,7 +584,7 @@ const getInstalledValue = (row: any, columnType: string) => {
   return isPreview ? (
     <div className="print-section report-page min-h-[1056px] relative">
       <div className="mb-8">
-        <img src="/images/greenlight-logo.png" alt="GreenLight Logo" className="h-24" crossOrigin="anonymous" />
+        <Image src="/images/greenlight-logo.png" alt="GreenLight Logo" width={150} height={96} className="h-24" />
       </div>
 
       <div className="mb-16">
@@ -678,11 +684,12 @@ const getInstalledValue = (row: any, columnType: string) => {
       </div>
 
       <div className="footer-container">
-        <img
+        <Image
           src="/images/greenlight-footer.png"
           alt="GreenLight Footer"
+          width={800}
+          height={100}
           className="w-full h-auto"
-          crossOrigin="anonymous"
         />
       </div>
     </div>
@@ -692,16 +699,13 @@ const getInstalledValue = (row: any, columnType: string) => {
       {dataPages.map((pageData, pageIndex) => (
         <div key={pageIndex} className="print-section report-page min-h-[1056px] relative">
           <div className="mb-8">
-            <img
-              src="/images/greenlight-logo.png"
-              alt="GreenLight Logo"
-              className="h-24"
-              crossOrigin="anonymous"
-            />
+            <Image src="/images/greenlight-logo.png" alt="GreenLight Logo" width={150} height={96} className="h-24" />
           </div>
 
           <div className="mb-16">
-            <h2 className="text-xl font-bold mb-6">{reportData?.sections?.detailPage?.title || "Installation Details"}</h2>
+            <h2 className="text-xl font-bold mb-6">
+              {reportData?.sections?.detailPage?.title || "Installation Details"}
+            </h2>
 
             <div className="mb-6 overflow-hidden rounded-md border">
               <Table>
@@ -753,11 +757,12 @@ const getInstalledValue = (row: any, columnType: string) => {
           </div>
 
           <div className="footer-container">
-            <img
+            <Image
               src="/images/greenlight-footer.png"
               alt="GreenLight Footer"
+              width={800}
+              height={100}
               className="w-full h-auto"
-              crossOrigin="anonymous"
             />
           </div>
 
