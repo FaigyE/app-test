@@ -240,22 +240,25 @@ export const getUnifiedNotes = ({
   // 4. Load and merge manually added/edited notes from local storage (new format)
   const manuallyAddedNotes = loadNotesFromLocalStorage()
   manuallyAddedNotes.forEach((note) => {
-    // If a note with the same title (unit) already exists from CSV, append to it
-    // Otherwise, add it as a new note
-    if (compiledNotes[note.unit]) {
-      compiledNotes[note.unit] = (compiledNotes[note.unit] || "") + note.content
-    } else {
-      compiledNotes[note.unit] = note.content
+    // Only process notes that have actual content
+    if (note.content && note.content.trim() && note.content !== "undefined") {
+      if (compiledNotes[note.unit]) {
+        compiledNotes[note.unit] = (compiledNotes[note.unit] || "") + note.content
+      } else {
+        compiledNotes[note.unit] = note.content
+      }
     }
   })
 
-  // Convert the compiledNotes map to the Note[] array format
-  const finalNotes: Note[] = Object.entries(compiledNotes).map(([unit, content], index) => ({
-    id: `auto-${index}-${Date.now()}`, // Generate a unique ID
-    unit,
-    content: content.trim(),
-    timestamp: Date.now(),
-  }))
+  // Convert the compiledNotes map to the Note[] array format, filtering out empty notes
+  const finalNotes: Note[] = Object.entries(compiledNotes)
+    .filter(([unit, content]) => content && content.trim() && content !== "undefined")
+    .map(([unit, content], index) => ({
+      id: `auto-${index}-${Date.now()}`, // Generate a unique ID
+      unit,
+      content: content.trim(),
+      timestamp: Date.now(),
+    }))
 
   // Sort notes by unit number
   return finalNotes.sort((a, b) => {
